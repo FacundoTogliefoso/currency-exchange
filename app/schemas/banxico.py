@@ -1,4 +1,3 @@
-from typing import List
 from pydantic import BaseModel, Field
 
 
@@ -14,13 +13,13 @@ class BanxicoSeries(BaseModel):
 
     idSerie: str
     titulo: str
-    datos: List[BanxicoDataPoint]
+    datos: list[BanxicoDataPoint]
 
 
 class BanxicoSeriesContainer(BaseModel):
     """Container for Banxico series data"""
 
-    series: List[BanxicoSeries]
+    series: list[BanxicoSeries]
 
 
 class BanxicoResponse(BaseModel):

@@ -1,13 +1,13 @@
-from .rates import (
-    ExchangeRateData,
-    CurrentRateResponse,
-    AverageRateData,
-    AverageRateResponse,
-    HistoricalRateResponse,
-)
 from .banxico import BanxicoResponse
 from .error import ErrorResponse
-from .health import HealthStatus, DependencyStatus, DetailedHealthResponse
+from .health import DependencyStatus, DetailedHealthResponse, HealthStatus
+from .rates import (
+    AverageRateData,
+    AverageRateResponse,
+    CurrentRateResponse,
+    ExchangeRateData,
+    HistoricalRateResponse,
+)
 
 __all__ = [
     "ExchangeRateData",

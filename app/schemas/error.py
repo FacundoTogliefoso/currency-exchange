@@ -1,6 +1,6 @@
-from typing import Optional
-from pydantic import BaseModel, Field
 import datetime
+
+from pydantic import BaseModel, Field
 
 
 class ErrorDetail(BaseModel):
@@ -10,9 +10,9 @@ class ErrorDetail(BaseModel):
     message: str = Field(..., description="Error message")
     correlation_id: str = Field(..., description="Request correlation ID")
     timestamp: float = Field(
-        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).timestamp()
+        default_factory=lambda: datetime.datetime.now(datetime.UTC).timestamp()
     )
-    details: Optional[str] = Field(None, description="Additional error details")
+    details: str | None = Field(None, description="Additional error details")
 
 
 class ErrorResponse(BaseModel):

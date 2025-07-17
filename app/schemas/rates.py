@@ -1,9 +1,12 @@
 import datetime
-from typing import List, Dict, Any
+from typing import Any
+
 from pydantic import BaseModel, Field, field_validator
 
 
-DATETIME_NOW = datetime.datetime.now(datetime.timezone.utc)
+def get_timestamp():
+    """Get current UTC timestamp"""
+    return datetime.datetime.now(datetime.UTC)
 
 
 class ExchangeRateData(BaseModel):
@@ -14,8 +17,8 @@ class ExchangeRateData(BaseModel):
 
 class CurrentRateResponse(BaseModel):
     data: ExchangeRateData
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    timestamp: datetime = Field(default_factory=DATETIME_NOW)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    timestamp: datetime = Field(default_factory=get_timestamp())
     cache_hit: bool = Field(default=False)
 
 
@@ -36,15 +39,15 @@ class AverageRateData(BaseModel):
 
 class AverageRateResponse(BaseModel):
     data: AverageRateData
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    timestamp: datetime = Field(default_factory=DATETIME_NOW)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    timestamp: datetime = Field(default_factory=get_timestamp())
     cache_hit: bool = Field(default=False)
 
 
 class HistoricalRateResponse(BaseModel):
-    data: List[ExchangeRateData]
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    timestamp: datetime = Field(default_factory=DATETIME_NOW)
+    data: list[ExchangeRateData]
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    timestamp: datetime = Field(default_factory=get_timestamp())
     cache_hit: bool = Field(default=False)
 
     @field_validator("data")
