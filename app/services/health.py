@@ -1,4 +1,3 @@
-# app/services/health.py
 import datetime
 import logging
 
@@ -17,7 +16,11 @@ async def check_banxico_status() -> dict:
     """Checks whether Banxico API is healthy."""
     try:
         response = await banxico_api.fetch_series()
-        if not response.bmx or "series" not in response.bmx:
+        if (
+            not response.bmx
+            or not hasattr(response.bmx, "series")
+            or not response.bmx.series
+        ):
             raise ValueError("Unexpected Banxico response format")
 
         return {"status": "healthy", "source": "banxico", "timestamp": get_timestamp()}

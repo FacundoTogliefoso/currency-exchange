@@ -14,7 +14,9 @@ class Settings(BaseSettings):
         "https://www.banxico.org.mx/SieAPIRest/service/v1/series"
     )
     BANXICO_SERIES_ID: str = "SF43718"  # USD/MXN exchange rate
-    BANXICO_TOKEN: str = ""
+    BANXICO_TOKEN: str = (
+        "60779e9a83e7133cc298c8d7f2b3e8750e9851887f7ad2f07e6c872445feb672"
+    )
 
     # Redis
     REDIS_HOST: str = "localhost"

@@ -8,9 +8,10 @@ from app.services.banxico import banxico_api
 
 logger = logging.getLogger(__name__)
 
-CURRENT_RATE_TTL = 300
-HISTORICAL_RATE_TTL = 3600
-AVERAGE_RATE_TTL = 1800
+# Cache TTLs
+CURRENT_RATE_TTL = 300  # 5 minutes
+HISTORICAL_RATE_TTL = 3600  # 1 hour
+AVERAGE_RATE_TTL = 1800  # 30 minutes
 
 
 def _parse_date(date_str: str) -> date:
@@ -38,13 +39,23 @@ async def get_current_exchange_rate() -> ExchangeRateData | None:
 
     logger.debug("Cache miss for current rate — calling Banxico API")
     response = await banxico_api.fetch_series()
-    series = response.bmx.get("series", [])
-    if not series or not series[0].get("datos"):
+
+    if (
+        not response.bmx
+        or not hasattr(response.bmx, "series")
+        or not response.bmx.series
+    ):
+        logger.error("No series data in Banxico response")
         return None
 
-    latest = series[0]["datos"][0]
+    series = response.bmx.series[0]
+    if not hasattr(series, "datos") or not series.datos:
+        logger.error("No datos in series")
+        return None
+
+    latest = series.datos[0]
     rate_data = ExchangeRateData(
-        date=_parse_date(latest["fecha"]), rate=float(latest["dato"]), source="banxico"
+        date=_parse_date(latest.fecha), rate=float(latest.dato), source="banxico"
     )
 
     try:
@@ -85,23 +96,29 @@ async def get_historical_rates(days: int = 10) -> list[ExchangeRateData]:
     start = end - timedelta(days=days + 10)
 
     response = await banxico_api.fetch_series(
-        start_date=start.strftime("%d-%m-%Y"), end_date=end.strftime("%d-%m-%Y")
+        start_date=start.strftime("%Y-%m-%d"), end_date=end.strftime("%Y-%m-%d")
     )
 
-    series = response.bmx.get("series", [])
-    if not series:
+    if (
+        not response.bmx
+        or not hasattr(response.bmx, "series")
+        or not response.bmx.series
+    ):
         return []
 
-    data = series[0]["datos"]
+    series = response.bmx.series[0]
+    if not hasattr(series, "datos") or not series.datos:
+        return []
+
     rates = []
-    for item in data:
-        if item["dato"] == "N/E":
+    for item in series.datos:
+        if item.dato == "N/E":
             continue
-        parsed_date = _parse_date(item["fecha"])
+        parsed_date = _parse_date(item.fecha)
         if parsed_date.weekday() < 5:
             rates.append(
                 ExchangeRateData(
-                    date=parsed_date, rate=float(item["dato"]), source="banxico"
+                    date=parsed_date, rate=float(item.dato), source="banxico"
                 )
             )
 

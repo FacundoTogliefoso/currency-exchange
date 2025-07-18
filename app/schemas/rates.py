@@ -18,7 +18,7 @@ class ExchangeRateData(BaseModel):
 class CurrentRateResponse(BaseModel):
     data: ExchangeRateData
     metadata: dict[str, Any] = Field(default_factory=dict)
-    timestamp: datetime = Field(default_factory=get_timestamp())
+    timestamp: datetime.datetime = Field(default_factory=get_timestamp)
     cache_hit: bool = Field(default=False)
 
 
@@ -40,14 +40,14 @@ class AverageRateData(BaseModel):
 class AverageRateResponse(BaseModel):
     data: AverageRateData
     metadata: dict[str, Any] = Field(default_factory=dict)
-    timestamp: datetime = Field(default_factory=get_timestamp())
+    timestamp: datetime.datetime = Field(default_factory=get_timestamp)
     cache_hit: bool = Field(default=False)
 
 
 class HistoricalRateResponse(BaseModel):
     data: list[ExchangeRateData]
     metadata: dict[str, Any] = Field(default_factory=dict)
-    timestamp: datetime = Field(default_factory=get_timestamp())
+    timestamp: datetime.datetime = Field(default_factory=get_timestamp)
     cache_hit: bool = Field(default=False)
 
     @field_validator("data")

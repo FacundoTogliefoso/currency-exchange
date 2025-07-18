@@ -1,3 +1,4 @@
+# app/schemas/health.py
 import datetime
 from typing import Any
 
@@ -11,7 +12,7 @@ def get_timestamp():
 
 class HealthStatus(BaseModel):
     status: str
-    timestamp: datetime = Field(default_factory=get_timestamp())
+    timestamp: datetime.datetime = Field(default_factory=get_timestamp)
     version: str
     uptime_seconds: int
 
@@ -20,13 +21,13 @@ class DependencyStatus(BaseModel):
     name: str
     status: str
     response_time_ms: float | None = None
-    last_check: datetime = Field(default_factory=get_timestamp())
+    last_check: datetime.datetime = Field(default_factory=get_timestamp)
     details: str | None = None
 
 
 class DetailedHealthResponse(BaseModel):
     status: str
-    timestamp: datetime = Field(default_factory=get_timestamp())
+    timestamp: datetime.datetime = Field(default_factory=get_timestamp)
     version: str
     uptime_seconds: int
     dependencies: list[DependencyStatus]

@@ -31,17 +31,52 @@ class BanxicoAPI:
             endpoint += "/oportuno"
 
         params = {"mediaType": "json"}
+        if settings.BANXICO_TOKEN:
+            params["token"] = settings.BANXICO_TOKEN
+
         headers = {
-            "token": settings.BANXICO_TOKEN,
             "Accept": "application/json",
             "User-Agent": "RatesService/1.0",
         }
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
+                logger.info(f"Making request to Banxico API: {endpoint}")
                 response = await client.get(endpoint, params=params, headers=headers)
                 response.raise_for_status()
-                return BanxicoResponse.model_validate(response.json())
+
+                raw_data = response.json()
+                logger.info(f"Banxico API response: {raw_data}")
+
+                if not raw_data.get("bmx") or not raw_data["bmx"].get("series"):
+                    logger.error(f"Invalid Banxico response structure: {raw_data}")
+                    raise HTTPException(
+                        status_code=502,
+                        detail="Invalid response format from Banxico API",
+                    )
+
+                series = raw_data["bmx"]["series"][0]
+                if not series.get("datos"):
+                    logger.warning(f"No data in Banxico response for {endpoint}")
+                    if "oportuno" in endpoint:
+                        logger.info(
+                            "Trying with recent date range instead of /oportuno"
+                        )
+                        from datetime import date, timedelta
+
+                        end_date = date.today()
+                        start_date = end_date - timedelta(days=5)
+                        return await self.fetch_series(
+                            start_date=start_date.strftime("%d-%m-%Y"),
+                            end_date=end_date.strftime("%d-%m-%Y"),
+                        )
+
+                    raise HTTPException(
+                        status_code=404,
+                        detail="No exchange rate data available from Banxico",
+                    )
+
+                return BanxicoResponse.model_validate(raw_data)
 
         except httpx.TimeoutException as e:
             logger.error(f"Timeout calling Banxico API: {endpoint}")
@@ -55,6 +90,10 @@ class BanxicoAPI:
             raise HTTPException(
                 status_code=502, detail="Banxico API returned an error"
             ) from e
+
+        except HTTPException:
+            # Re-raise HTTP exceptions (our custom ones)
+            raise
 
         except Exception as e:
             logger.error(f"Unexpected error: {str(e)}")
