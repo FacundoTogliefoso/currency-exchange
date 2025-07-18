@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 
 def get_timestamp():
     """Get current UTC timestamp"""
-    return datetime.datetime.now(datetime.UTC)
+    return datetime.datetime.now(datetime.timezone.utc)
 
 
 class ExchangeRateData(BaseModel):

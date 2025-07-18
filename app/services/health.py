@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 def get_timestamp():
     """Get current UTC timestamp"""
-    return datetime.datetime.now(datetime.UTC).isoformat()
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
 async def check_banxico_status() -> dict:

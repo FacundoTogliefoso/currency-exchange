@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 def get_timestamp():
     """Get current UTC timestamp"""
-    return datetime.datetime.now(datetime.UTC)
+    return datetime.datetime.now(datetime.timezone.utc)
 
 
 class HealthStatus(BaseModel):
