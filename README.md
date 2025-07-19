@@ -21,6 +21,8 @@ Production-ready, scalable USD exchange rate service using Banxico API with **99
 
 ### Core Components
 
+**Region**: us-west-1 (N. California) – per challenge requirements
+
 | Component         | Technology            | Specification              | Justification                               |
 | ----------------- | --------------------- | -------------------------- | ------------------------------------------- |
 | **Compute**       | EC2 Auto Scaling      | t3.medium (2-10 instances) | FastAPI async performance, cost-optimal     |
@@ -31,7 +33,7 @@ Production-ready, scalable USD exchange rate service using Banxico API with **99
 
 ### Architecture Diagram
 
-![Currency Exchange Architecture Diagram](currency_architecture.png)
+![Currency Exchange Architecture Diagram](docs/images/currency_architecture.png)
 
 ### Network Layout
 
@@ -227,7 +229,13 @@ Internet → CloudFront → WAF → ALB → EC2 (Private) → Aurora/Redis (Isol
 * **Traffic Pattern**: 80% Mexico/LATAM, 20% global
 * **Data Retention**: 2 years for compliance
 * **Peak Multiplier**: 10x during economic events
-* **Infra Provisioning**: Terraform or CloudFormation, not AWS CDK
+* **Infra Provisioning**: Terraform selected (CDK optional per brief)
+* **Deployment Region**: us-west-1 (N. California)
+* **Infrastructure Lifecycle**: Infra will be destroyed post-evaluation
+* **Secrets Usage**: AWS Secrets Manager used voluntarily for design quality
+* **Authentication**: Public API, no authentication required
+* **Observability**: CloudWatch-native only (no external tools)
+* **Performance Testing**: Not required as per instructions
 
 ---
 
