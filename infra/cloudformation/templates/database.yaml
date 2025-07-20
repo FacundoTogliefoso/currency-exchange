@@ -1,0 +1,109 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Aurora Serverless v2 Cluster for Currency Exchange
+
+Parameters:
+  ProjectName:
+    Type: String
+  Environment:
+    Type: String
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  DatabaseSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+  DbPassword:
+    Type: String
+    NoEcho: true
+  DbUsername:
+    Type: String
+    Default: admin
+  DbName:
+    Type: String
+    Default: currency_exchange
+
+Resources:
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: "Subnet group for Aurora cluster"
+      SubnetIds: !Ref DatabaseSubnetIds
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}-db-subnet-group"
+
+  AuroraSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Aurora DB SG
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: !Ref VpcCidr
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}-aurora-sg"
+
+  AuroraCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      Engine: aurora-mysql
+      EngineMode: provisioned
+      EngineVersion: "8.0.mysql_aurora.3.05.2"
+      DBClusterIdentifier: !Sub "${ProjectName}-${Environment}-aurora-cluster"
+      DatabaseName: !Ref DbName
+      MasterUsername: !Ref DbUsername
+      MasterUserPassword: !Ref DbPassword
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref AuroraSecurityGroup
+      BackupRetentionPeriod: 7
+      PreferredBackupWindow: "03:00-04:00"
+      PreferredMaintenanceWindow: "sun:04:00-sun:05:00"
+      DeletionProtection: false
+      ServerlessV2ScalingConfiguration:
+        MinCapacity: 0.5
+        MaxCapacity: 16
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}-aurora-cluster"
+
+  AuroraInstance1:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBClusterIdentifier: !Ref AuroraCluster
+      DBInstanceClass: db.serverless
+      Engine: aurora-mysql
+      PubliclyAccessible: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}-aurora-instance-1"
+
+  AuroraInstance2:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBClusterIdentifier: !Ref AuroraCluster
+      DBInstanceClass: db.serverless
+      Engine: aurora-mysql
+      PubliclyAccessible: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}-aurora-instance-2"
+
+Outputs:
+  AuroraEndpoint:
+    Description: Writer endpoint of Aurora
+    Value: !GetAtt AuroraCluster.Endpoint.Address
+  AuroraReaderEndpoint:
+    Description: Reader endpoint of Aurora
+    Value: !GetAtt AuroraCluster.ReadEndpoint.Address
+  AuroraPort:
+    Description: Aurora MySQL Port
+    Value: 3306
+  AuroraSecurityGroupId:
+    Description: SG for Aurora access
+    Value: !Ref AuroraSecurityGroup

@@ -1,0 +1,30 @@
+[
+    {
+      "ParameterKey": "Environment",
+      "ParameterValue": "dev"
+    },
+    {
+      "ParameterKey": "ProjectName",
+      "ParameterValue": "currency-exchange"
+    },
+    {
+      "ParameterKey": "VpcCidr",
+      "ParameterValue": "10.0.0.0/16"
+    },
+    {
+      "ParameterKey": "DbPassword",
+      "ParameterValue": "CurrencyExchange2025!Challenge"
+    },
+    {
+      "ParameterKey": "DbUsername",
+      "ParameterValue": "admin"
+    },
+    {
+      "ParameterKey": "DbName",
+      "ParameterValue": "currency_exchange"
+    },
+    {
+      "ParameterKey": "ContainerImage",
+      "ParameterValue": "public.ecr.aws/nginx/nginx:latest"
+    }
+]

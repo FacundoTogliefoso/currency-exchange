@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ElastiCache Redis for Currency Exchange (Highly Available)
+
+Parameters:
+  ProjectName:
+    Type: String
+  Environment:
+    Type: String
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PrivateSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+  AllowedCidr:
+    Type: String
+    Default: 10.0.0.0/16
+
+Resources:
+  RedisSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: Redis subnet group
+      SubnetIds: !Ref PrivateSubnetIds
+      CacheSubnetGroupName: !Sub "${ProjectName}-${Environment}-redis-subnet-group"
+
+  RedisSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Redis SG
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          CidrIp: !Ref AllowedCidr
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}-redis-sg"
+
+  RedisReplicationGroup:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupId: !Sub "${ProjectName}-${Environment}-redis-rg"
+      ReplicationGroupDescription: Currency Exchange Redis Replication Group
+      Engine: redis
+      EngineVersion: 7.2
+      CacheNodeType: cache.t4g.small
+      NumNodeGroups: 1
+      ReplicasPerNodeGroup: 1
+      AutomaticFailoverEnabled: true
+      MultiAZEnabled: true
+      CacheSubnetGroupName: !Ref RedisSubnetGroup
+      SecurityGroupIds:
+        - !Ref RedisSecurityGroup
+      Port: 6379
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}-redis"
+
+Outputs:
+  RedisPrimaryEndpoint:
+    Description: Primary endpoint of Redis cluster
+    Value: !GetAtt RedisReplicationGroup.PrimaryEndPoint.Address
+
+  RedisPort:
+    Description: Redis port
+    Value: 6379
+
+  RedisSecurityGroupId:
+    Description: SG ID for Redis
+    Value: !Ref RedisSecurityGroup

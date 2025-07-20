@@ -1,0 +1,105 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Currency Exchange Platform - Infrastructure Orchestration Stack'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+  ProjectName:
+    Type: String
+    Default: currency-exchange
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+  DbPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 12
+  DbUsername:
+    Type: String
+    Default: admin
+  DbName:
+    Type: String
+    Default: currency_exchange
+  ContainerImage:
+    Type: String
+    Default: "public.ecr.aws/nginx/nginx:latest"
+
+Resources:
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./vpc.yaml
+      Parameters:
+        ProjectName: !Ref ProjectName
+        Environment: !Ref Environment
+        VpcCidr: !Ref VpcCidr
+
+  SecurityStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: VPCStack
+    Properties:
+      TemplateURL: ./security.yaml
+      Parameters:
+        ProjectName: !Ref ProjectName
+        Environment: !Ref Environment
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+        VpcCidr: !GetAtt VPCStack.Outputs.VpcCidr
+
+  DatabaseStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: [VPCStack, SecurityStack]
+    Properties:
+      TemplateURL: ./database.yaml
+      Parameters:
+        ProjectName: !Ref ProjectName
+        Environment: !Ref Environment
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+        VpcCidr: !GetAtt VPCStack.Outputs.VpcCidr
+        DatabaseSubnetIds: !Split [",", !GetAtt VPCStack.Outputs.DatabaseSubnetIds]
+        DbPassword: !Ref DbPassword
+        DbUsername: !Ref DbUsername
+        DbName: !Ref DbName
+
+  CacheStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: [VPCStack, SecurityStack]
+    Properties:
+      TemplateURL: ./cache.yaml
+      Parameters:
+        ProjectName: !Ref ProjectName
+        Environment: !Ref Environment
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+        PrivateSubnetIds: !Split [",", !GetAtt VPCStack.Outputs.PrivateSubnetIds]
+        AllowedCidr: !GetAtt VPCStack.Outputs.VpcCidr
+
+  ComputeStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: [VPCStack, SecurityStack, DatabaseStack, CacheStack]
+    Properties:
+      TemplateURL: ./compute.yaml
+      Parameters:
+        ProjectName: !Ref ProjectName
+        Environment: !Ref Environment
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+        PublicSubnetIds: [!GetAtt VPCStack.Outputs.PublicSubnetIds]
+        ContainerImage: !Ref ContainerImage
+
+Outputs:
+  ApplicationUrl:
+    Description: Public URL of the deployed API
+    Value: !GetAtt ComputeStack.Outputs.ApplicationUrl
+  DatabaseEndpoint:
+    Description: Aurora cluster writer endpoint
+    Value: !GetAtt DatabaseStack.Outputs.AuroraEndpoint
+  DatabaseReaderEndpoint:
+    Description: Aurora cluster reader endpoint
+    Value: !GetAtt DatabaseStack.Outputs.AuroraReaderEndpoint
+  RedisEndpoint:
+    Description: Redis cluster primary endpoint
+    Value: !GetAtt CacheStack.Outputs.RedisPrimaryEndpoint
+  VpcId:
+    Description: VPC ID
+    Value: !GetAtt VPCStack.Outputs.VpcId
