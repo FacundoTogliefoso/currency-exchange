@@ -3,13 +3,35 @@ version: "3.9"
 services:
   redis:
     image: redis:7.2-alpine
-    container_name: redis-cache
+    container_name: currency-redis
     ports:
       - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - currency-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: currency-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: currency_exchange
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: localpassword123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
       retries: 5
     restart: unless-stopped
     networks:
@@ -25,7 +47,8 @@ services:
     env_file:
       - .env
     environment:
-      - REDIS_HOST=redis
+      REDIS_HOST: redis
+      DATABASE_HOST: mysql
     depends_on:
       redis:
         condition: service_healthy
@@ -34,6 +57,9 @@ services:
     restart: unless-stopped
     networks:
       - currency-network
+
+volumes:
+  mysql_data:
 
 networks:
   currency-network:

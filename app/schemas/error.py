@@ -10,7 +10,7 @@ class ErrorDetail(BaseModel):
     message: str = Field(..., description="Error message")
     correlation_id: str = Field(..., description="Request correlation ID")
     timestamp: float = Field(
-        default_factory=lambda: datetime.datetime.now(datetime.UTC).timestamp()
+        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).timestamp()
     )
     details: str | None = Field(None, description="Additional error details")
 

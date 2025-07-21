@@ -1,30 +1,14 @@
 [
-    {
-      "ParameterKey": "Environment",
-      "ParameterValue": "dev"
-    },
-    {
-      "ParameterKey": "ProjectName",
-      "ParameterValue": "currency-exchange"
-    },
-    {
-      "ParameterKey": "VpcCidr",
-      "ParameterValue": "10.0.0.0/16"
-    },
-    {
-      "ParameterKey": "DbPassword",
-      "ParameterValue": "CurrencyExchange2025!Challenge"
-    },
-    {
-      "ParameterKey": "DbUsername",
-      "ParameterValue": "admin"
-    },
-    {
-      "ParameterKey": "DbName",
-      "ParameterValue": "currency_exchange"
-    },
-    {
-      "ParameterKey": "ContainerImage",
-      "ParameterValue": "public.ecr.aws/nginx/nginx:latest"
-    }
+  { "ParameterKey": "Environment", "ParameterValue": "dev" },
+  { "ParameterKey": "ProjectName", "ParameterValue": "currency-exchange" },
+  { "ParameterKey": "DbUsername", "ParameterValue": "admin" },
+  { "ParameterKey": "DbPassword", "ParameterValue": "SecurePass123!" },
+  { "ParameterKey": "DbName", "ParameterValue": "currency_exchange" },
+  { "ParameterKey": "VpcCidr", "ParameterValue": "10.0.0.0/16" },
+  { "ParameterKey": "PublicSubnet1Cidr", "ParameterValue": "10.0.1.0/24" },
+  { "ParameterKey": "PrivateSubnet1Cidr", "ParameterValue": "10.0.11.0/24" },
+  { "ParameterKey": "DatabaseSubnet1Cidr", "ParameterValue": "10.0.21.0/24" },
+  { "ParameterKey": "NotificationEmail", "ParameterValue": "alerts@example.com" },
+  { "ParameterKey": "ContainerImage", "ParameterValue": "public.ecr.aws/nginx/nginx:latest" },
+  { "ParameterKey": "BanxicoToken", "ParameterValue": "60779e9a83e7133cc298c8d7f2b3e8750e9851887f7ad2f07e6c872445feb672" }
 ]

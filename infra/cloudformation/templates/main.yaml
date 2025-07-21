@@ -1,4 +1,3 @@
----
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Currency Exchange Platform - Infrastructure Orchestration Stack'
 
@@ -7,31 +6,64 @@ Parameters:
     Type: String
     Default: dev
     AllowedValues: [dev, staging, prod]
+
   ProjectName:
     Type: String
     Default: currency-exchange
+
   VpcCidr:
     Type: String
     Default: 10.0.0.0/16
+
   DbPassword:
     Type: String
     NoEcho: true
     MinLength: 12
+
   DbUsername:
     Type: String
     Default: admin
+
   DbName:
     Type: String
     Default: currency_exchange
+
   ContainerImage:
     Type: String
     Default: "public.ecr.aws/nginx/nginx:latest"
 
+  NotificationEmail:
+    Type: String
+    Description: Email for monitoring alerts
+    Default: alerts@example.com
+
+  BanxicoToken:
+    Type: String
+    NoEcho: true
+    Default: ""
+    Description: Banxico API token
+
 Resources:
+  S3TemplateBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectName}-${Environment}-templates-${AWS::AccountId}"  # ← UNIQUE NAME
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:                                                # ← SECURITY
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}-template-bucket"
+
   VPCStack:
     Type: AWS::CloudFormation::Stack
+    DependsOn: S3TemplateBucket                                    # ← DEPENDENCY
     Properties:
-      TemplateURL: ./vpc.yaml
+      TemplateURL: !Sub "https://${S3TemplateBucket}.s3.amazonaws.com/vpc.yaml"    # ← S3 URL
       Parameters:
         ProjectName: !Ref ProjectName
         Environment: !Ref Environment
@@ -39,26 +71,38 @@ Resources:
 
   SecurityStack:
     Type: AWS::CloudFormation::Stack
-    DependsOn: VPCStack
+    DependsOn: [S3TemplateBucket, VPCStack]
     Properties:
-      TemplateURL: ./security.yaml
+      TemplateURL: !Sub "https://${S3TemplateBucket}.s3.amazonaws.com/security.yaml"
       Parameters:
         ProjectName: !Ref ProjectName
         Environment: !Ref Environment
         VpcId: !GetAtt VPCStack.Outputs.VpcId
         VpcCidr: !GetAtt VPCStack.Outputs.VpcCidr
 
+  SecretsStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: S3TemplateBucket
+    Properties:
+      TemplateURL: !Sub "https://${S3TemplateBucket}.s3.amazonaws.com/secrets.yaml"
+      Parameters:
+        ProjectName: !Ref ProjectName
+        Environment: !Ref Environment
+        DbPassword: !Ref DbPassword
+        DbUsername: !Ref DbUsername
+        BanxicoToken: !Ref BanxicoToken
+
   DatabaseStack:
     Type: AWS::CloudFormation::Stack
-    DependsOn: [VPCStack, SecurityStack]
+    DependsOn: [VPCStack, SecurityStack, SecretsStack]
     Properties:
-      TemplateURL: ./database.yaml
+      TemplateURL: !Sub "https://${S3TemplateBucket}.s3.amazonaws.com/database.yaml"
       Parameters:
         ProjectName: !Ref ProjectName
         Environment: !Ref Environment
         VpcId: !GetAtt VPCStack.Outputs.VpcId
         VpcCidr: !GetAtt VPCStack.Outputs.VpcCidr
-        DatabaseSubnetIds: !Split [",", !GetAtt VPCStack.Outputs.DatabaseSubnetIds]
+        DatabaseSubnetIds: !GetAtt VPCStack.Outputs.DatabaseSubnetIds
         DbPassword: !Ref DbPassword
         DbUsername: !Ref DbUsername
         DbName: !Ref DbName
@@ -67,39 +111,80 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: [VPCStack, SecurityStack]
     Properties:
-      TemplateURL: ./cache.yaml
+      TemplateURL: !Sub "https://${S3TemplateBucket}.s3.amazonaws.com/cache.yaml"
       Parameters:
         ProjectName: !Ref ProjectName
         Environment: !Ref Environment
         VpcId: !GetAtt VPCStack.Outputs.VpcId
-        PrivateSubnetIds: !Split [",", !GetAtt VPCStack.Outputs.PrivateSubnetIds]
+        PrivateSubnetIds: !GetAtt VPCStack.Outputs.PrivateSubnetIds
         AllowedCidr: !GetAtt VPCStack.Outputs.VpcCidr
 
   ComputeStack:
     Type: AWS::CloudFormation::Stack
     DependsOn: [VPCStack, SecurityStack, DatabaseStack, CacheStack]
     Properties:
-      TemplateURL: ./compute.yaml
+      TemplateURL: !Sub "https://${S3TemplateBucket}.s3.amazonaws.com/compute.yaml"
       Parameters:
         ProjectName: !Ref ProjectName
         Environment: !Ref Environment
         VpcId: !GetAtt VPCStack.Outputs.VpcId
-        PublicSubnetIds: [!GetAtt VPCStack.Outputs.PublicSubnetIds]
+        PublicSubnetIds: !GetAtt VPCStack.Outputs.PublicSubnetIds
+        PrivateSubnetIds: !GetAtt VPCStack.Outputs.PrivateSubnetIds
         ContainerImage: !Ref ContainerImage
+
+  MonitoringStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: [ComputeStack, DatabaseStack]
+    Properties:
+      TemplateURL: !Sub "https://${S3TemplateBucket}.s3.amazonaws.com/monitoring.yaml"
+      Parameters:
+        ProjectName: !Ref ProjectName
+        Environment: !Ref Environment
+        EC2AutoScalingGroupName: !GetAtt ComputeStack.Outputs.AutoScalingGroupName
+        AuroraClusterIdentifier: !GetAtt DatabaseStack.Outputs.AuroraClusterIdentifier
+        ALBFullName: !GetAtt ComputeStack.Outputs.LoadBalancerFullName
+        NotificationEmail: !Ref NotificationEmail
+        LogRetentionDays: 30
 
 Outputs:
   ApplicationUrl:
     Description: Public URL of the deployed API
     Value: !GetAtt ComputeStack.Outputs.ApplicationUrl
+    Export:
+      Name: !Sub "${AWS::StackName}-application-url"
+
   DatabaseEndpoint:
     Description: Aurora cluster writer endpoint
     Value: !GetAtt DatabaseStack.Outputs.AuroraEndpoint
+    Export:
+      Name: !Sub "${AWS::StackName}-database-endpoint"
+
   DatabaseReaderEndpoint:
     Description: Aurora cluster reader endpoint
     Value: !GetAtt DatabaseStack.Outputs.AuroraReaderEndpoint
+    Export:
+      Name: !Sub "${AWS::StackName}-database-reader-endpoint"
+
   RedisEndpoint:
     Description: Redis cluster primary endpoint
     Value: !GetAtt CacheStack.Outputs.RedisPrimaryEndpoint
+    Export:
+      Name: !Sub "${AWS::StackName}-redis-endpoint"
+
   VpcId:
     Description: VPC ID
     Value: !GetAtt VPCStack.Outputs.VpcId
+    Export:
+      Name: !Sub "${AWS::StackName}-vpc-id"
+
+  S3BucketName:
+    Description: S3 bucket for templates
+    Value: !Ref S3TemplateBucket
+
+  MonitoringDashboard:
+    Description: CloudWatch Dashboard URL
+    Value: !GetAtt MonitoringStack.Outputs.DashboardURL
+
+  AlertsTopicArn:
+    Description: SNS Topic for alerts
+    Value: !GetAtt MonitoringStack.Outputs.AlertsTopicArn

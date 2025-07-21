@@ -35,6 +35,8 @@ async def root():
     return {
         "message": f"{settings.APP_NAME} is running",
         "version": settings.APP_VERSION,
-        "docs": "/docs",
-        "api": settings.API_V1_PREFIX
+        "environment": settings.ENVIRONMENT,
+        "debug": settings.DEBUG,
+        "docs": "/docs" if not settings.is_production else "disabled",
+        "health": f"{settings.API_V1_PREFIX}/health"
     }
