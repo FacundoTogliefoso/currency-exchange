@@ -26,6 +26,7 @@ Parameters:
     Default: currency_exchange
   ContainerImage:
     Type: String
+    Default: 992313771618.dkr.ecr.us-west-1.amazonaws.com/currency-api:latest
   NotificationEmail:
     Type: String
     Description: Email for monitoring alerts
@@ -127,7 +128,7 @@ Resources:
     - DatabaseStack
     - CacheStack
     Properties:
-      TemplateURL: https://s3.us-west-1.amazonaws.com/currency-exchange-dev-templates-facu/977e528f13a902803c342485c938429f.template
+      TemplateURL: https://s3.us-west-1.amazonaws.com/currency-exchange-dev-templates-facu/296aa17868911c7b4e8e4ae717839999.template
       Parameters:
         ProjectName:
           Ref: ProjectName
