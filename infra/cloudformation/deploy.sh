@@ -7,7 +7,7 @@ ENV="dev"
 AWS_REGION="us-west-1"
 ECR_REPO_NAME="currency-api"
 IMAGE_TAG="$(date +%Y%m%d-%H%M%S)"
-TEMPLATE_FILE="infra/main.yaml"
+TEMPLATE_FILE="infra/cloudformation/main.yaml"
 STACK_NAME="${PROJECT_NAME}-${ENV}-stack"
 
 echo "Starting deployment..."
@@ -45,7 +45,7 @@ echo "Pushing to ECR..."
 docker push "$ECR_URI:$IMAGE_TAG"
 
 # Package templates if using nested stacks
-if [ -d "infra" ]; then
+if [ -d "infra/cloudformation" ]; then
     echo "Packaging nested templates..."
     aws cloudformation package \
         --template-file "$TEMPLATE_FILE" \
