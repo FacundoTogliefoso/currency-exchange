@@ -40,3 +40,7 @@ async def root():
         "docs": "/docs" if not settings.is_production else "disabled",
         "health": f"{settings.API_V1_PREFIX}/health"
     }
+
+@app.get("/health", tags=["Health"])
+async def simple_health():
+    return {"status": "healthy"}

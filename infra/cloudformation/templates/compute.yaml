@@ -7,13 +7,19 @@ Parameters:
     Type: String
   Environment:
     Type: String
+  DatabaseEndpoint:
+    Type: String
+    Default: "localhost"
+  RedisEndpoint:
+    Type: String  
+    Default: "localhost" 
   VpcId:
     Type: AWS::EC2::VPC::Id
   PublicSubnetIds:
     Type: List<AWS::EC2::Subnet::Id>
   ContainerImage:
     Type: String
-    Description: Docker image URI (e.g. 1234567890.dkr.ecr.us-west-1.amazonaws.com/currency-api:latest)
+    Description: Docker image URI from ECR
   ContainerPort:
     Type: Number
     Default: 8000
@@ -72,17 +78,24 @@ Resources:
   ALBTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      Name: !Sub "${ProjectName}-${Environment}-tg"
+      Name: !Sub "${ProjectName}-tg"
       Port: !Ref ContainerPort
       Protocol: HTTP
       TargetType: ip
       VpcId: !Ref VpcId
-      HealthCheckPath: /api/v1/health
+      HealthCheckEnabled: true
+      HealthCheckPath: "/health"
       HealthCheckProtocol: HTTP
       HealthCheckIntervalSeconds: 30
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
-      UnhealthyThresholdCount: 5
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: "200"
+      # Add explicit target group attributes
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: "30"
 
   ALBListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -119,6 +132,7 @@ Resources:
   ECSTaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
+      Family: !Sub "${ProjectName}-${Environment}-task"
       RequiresCompatibilities: [FARGATE]
       Cpu: 256
       Memory: 512
@@ -129,19 +143,33 @@ Resources:
           Image: !Ref ContainerImage
           PortMappings:
             - ContainerPort: !Ref ContainerPort
+              Protocol: tcp
           Essential: true
+          Environment:
+            - Name: ENVIRONMENT
+              Value: !Ref Environment
+            - Name: DEBUG
+              Value: "false"
+            - Name: LOG_LEVEL
+              Value: INFO
+            - Name: PORT
+              Value: "8000"
+            - Name: DATABASE_HOST
+              Value: !Ref DatabaseEndpoint
+            - Name: REDIS_HOST
+              Value: !Ref RedisEndpoint
           LogConfiguration:
             LogDriver: awslogs
             Options:
               awslogs-group: !Ref ECSLogGroup
               awslogs-region: !Ref "AWS::Region"
               awslogs-stream-prefix: api
-
-  # ECS Service
+  
   ECSService:
     Type: AWS::ECS::Service
     DependsOn: ALBListener
     Properties:
+      ServiceName: !Sub "${ProjectName}-${Environment}-service"
       Cluster: !Ref ECSCluster
       LaunchType: FARGATE
       DesiredCount: 1
@@ -155,28 +183,41 @@ Resources:
         - ContainerName: api
           ContainerPort: !Ref ContainerPort
           TargetGroupArn: !Ref ALBTargetGroup
+      HealthCheckGracePeriodSeconds: 120 
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 0
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
 
 Outputs:
   ApplicationUrl:
     Description: Public URL of the API
     Value: !Sub "http://${ALB.DNSName}"
     Export:
-      Name: !Sub "${ProjectName}-${Environment}-app-url"
+      Name: !Sub "${AWS::StackName}-app-url"
 
   ALBDNSName:
     Description: ALB DNS name
     Value: !GetAtt ALB.DNSName
     Export:
-      Name: !Sub "${ProjectName}-${Environment}-alb-dns"
+      Name: !Sub "${AWS::StackName}-alb-dns"
 
   ClusterName:
     Description: ECS Cluster name
     Value: !Ref ECSCluster
     Export:
-      Name: !Sub "${ProjectName}-${Environment}-cluster-name"
+      Name: !Sub "${AWS::StackName}-cluster-name"
+
+  ServiceName:
+    Description: ECS Service name
+    Value: !Ref ECSService
+    Export:
+      Name: !Sub "${AWS::StackName}-service-name"
 
   TaskDefinitionArn:
     Description: ECS Task Definition ARN
     Value: !Ref ECSTaskDefinition
     Export:
-      Name: !Sub "${ProjectName}-${Environment}-task-definition"
+      Name: !Sub "${AWS::StackName}-task-definition"

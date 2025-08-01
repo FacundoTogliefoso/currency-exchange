@@ -39,10 +39,10 @@ Resources:
   RedisReplicationGroup:
     Type: AWS::ElastiCache::ReplicationGroup
     Properties:
-      ReplicationGroupId: !Sub "${ProjectName}-${Environment}-redis-rg"
+      ReplicationGroupId: !Sub "${ProjectName}-${Environment}-redis-rg-facu"
       ReplicationGroupDescription: Currency Exchange Redis Replication Group
       Engine: redis
-      EngineVersion: 7.2
+      EngineVersion: 7.0
       CacheNodeType: cache.t4g.small
       NumNodeGroups: 1
       ReplicasPerNodeGroup: 1

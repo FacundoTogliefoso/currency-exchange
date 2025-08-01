@@ -1,0 +1,231 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Currency Exchange Platform - Infrastructure Orchestration Stack
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+    - dev
+    - staging
+    - prod
+  ProjectName:
+    Type: String
+    Default: currency-exchange
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+  DbPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 12
+  DbUsername:
+    Type: String
+    Default: admin
+  DbName:
+    Type: String
+    Default: currency_exchange
+  ContainerImage:
+    Type: String
+    Default: 992313771618.dkr.ecr.us-west-1.amazonaws.com/currency-api:latest
+  NotificationEmail:
+    Type: String
+    Description: Email for monitoring alerts
+    Default: alerts@example.com
+  BanxicoToken:
+    Type: String
+    NoEcho: true
+    Default: ''
+    Description: Banxico API token
+Resources:
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.us-west-1.amazonaws.com/currency-exchange-dev-templates-facu/c05ea26a023aad71e7dac8fc317676d4.template
+      Parameters:
+        ProjectName:
+          Ref: ProjectName
+        Environment:
+          Ref: Environment
+        VpcCidr:
+          Ref: VpcCidr
+  SecurityStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: VPCStack
+    Properties:
+      TemplateURL: https://s3.us-west-1.amazonaws.com/currency-exchange-dev-templates-facu/a9998bfd3f26f794655017637021db3d.template
+      Parameters:
+        ProjectName:
+          Ref: ProjectName
+        Environment:
+          Ref: Environment
+        VpcId:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.VpcId
+        VpcCidr:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.VpcCidr
+  DatabaseStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+    - VPCStack
+    - SecurityStack
+    Properties:
+      TemplateURL: https://s3.us-west-1.amazonaws.com/currency-exchange-dev-templates-facu/4016708a3963d17acb6cc20a8d73761f.template
+      Parameters:
+        ProjectName:
+          Ref: ProjectName
+        Environment:
+          Ref: Environment
+        VpcId:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.VpcId
+        VpcCidr:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.VpcCidr
+        DatabaseSubnetIds:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.DatabaseSubnetIds
+        DbPassword:
+          Ref: DbPassword
+        DbUsername:
+          Ref: DbUsername
+        DbName:
+          Ref: DbName
+  CacheStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+    - VPCStack
+    - SecurityStack
+    Properties:
+      TemplateURL: https://s3.us-west-1.amazonaws.com/currency-exchange-dev-templates-facu/d549368a692766f5f8d5f821611cf9b2.template
+      Parameters:
+        ProjectName:
+          Ref: ProjectName
+        Environment:
+          Ref: Environment
+        VpcId:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.VpcId
+        PrivateSubnetIds:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.PrivateSubnetIds
+        AllowedCidr:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.VpcCidr
+  ComputeStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+    - VPCStack
+    - SecurityStack
+    - DatabaseStack
+    - CacheStack
+    Properties:
+      TemplateURL: https://s3.us-west-1.amazonaws.com/currency-exchange-dev-templates-facu/822a0ddea3b92f38e6508b3d0f6e3ff5.template
+      Parameters:
+        ProjectName:
+          Ref: ProjectName
+        Environment:
+          Ref: Environment
+        VpcId:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.VpcId
+        PublicSubnetIds:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.PublicSubnetIds
+        ContainerImage:
+          Ref: ContainerImage
+  MonitoringStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+    - ComputeStack
+    - DatabaseStack
+    Properties:
+      TemplateURL: https://s3.us-west-1.amazonaws.com/currency-exchange-dev-templates-facu/ae32f5c4543549d6f4c32f475e6f6418.template
+      Parameters:
+        ProjectName:
+          Ref: ProjectName
+        Environment:
+          Ref: Environment
+        EC2AutoScalingGroupName:
+          Fn::GetAtt:
+          - ComputeStack
+          - Outputs.AutoScalingGroupName
+        AuroraClusterIdentifier:
+          Fn::GetAtt:
+          - DatabaseStack
+          - Outputs.AuroraClusterIdentifier
+        ALBFullName:
+          Fn::GetAtt:
+          - ComputeStack
+          - Outputs.LoadBalancerFullName
+        NotificationEmail:
+          Ref: NotificationEmail
+        LogRetentionDays: 30
+Outputs:
+  ApplicationUrl:
+    Description: Public URL of the deployed API
+    Value:
+      Fn::GetAtt:
+      - ComputeStack
+      - Outputs.ApplicationUrl
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-application-url
+  DatabaseEndpoint:
+    Description: Aurora cluster writer endpoint
+    Value:
+      Fn::GetAtt:
+      - DatabaseStack
+      - Outputs.AuroraEndpoint
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-database-endpoint
+  DatabaseReaderEndpoint:
+    Description: Aurora cluster reader endpoint
+    Value:
+      Fn::GetAtt:
+      - DatabaseStack
+      - Outputs.AuroraReaderEndpoint
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-database-reader-endpoint
+  RedisEndpoint:
+    Description: Redis cluster primary endpoint
+    Value:
+      Fn::GetAtt:
+      - CacheStack
+      - Outputs.RedisPrimaryEndpoint
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-redis-endpoint
+  VpcId:
+    Description: VPC ID
+    Value:
+      Fn::GetAtt:
+      - VPCStack
+      - Outputs.VpcId
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-vpc-id
+  MonitoringDashboard:
+    Description: CloudWatch Dashboard URL
+    Value:
+      Fn::GetAtt:
+      - MonitoringStack
+      - Outputs.DashboardURL
+  AlertsTopicArn:
+    Description: SNS Topic for alerts
+    Value:
+      Fn::GetAtt:
+      - MonitoringStack
+      - Outputs.AlertsTopicArn

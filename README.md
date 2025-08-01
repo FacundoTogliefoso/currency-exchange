@@ -30,9 +30,9 @@ chmod +x scripts/validate.sh
 ./scripts/validate.sh
 
 # Individual validations
-terraform -chdir=infra validate      
-python app/main.py --check          
-docker build -t currency-test .     
+terraform -chdir=infra validate
+python app/main.py --check
+docker build -t currency-test .
 ```
 
 ### Production Deployment
@@ -65,12 +65,12 @@ terraform apply  # 29 AWS resources
 
 | Component | Technology | Specification |
 |-----------|------------|---------------|
-| **Compute** | EC2 Auto Scaling | t3.medium (2-10 instances) | 
-| **Database** | Aurora Serverless v2 | 0.5-16 ACUs, MySQL 8.0 | 
-| **Cache** | ElastiCache Redis | r6g.large, Multi-AZ | 
-| **Load Balancer** | Application LB | Cross-zone, health checks | 
-| **Monitoring** | CloudWatch + SNS | Custom metrics, alarms | 
-| **Security** | WAF + Secrets Manager | Rate limiting, encryption | 
+| **Compute** | EC2 Auto Scaling | t3.medium (2-10 instances) |
+| **Database** | Aurora Serverless v2 | 0.5-16 ACUs, MySQL 8.0 |
+| **Cache** | ElastiCache Redis | r6g.large, Multi-AZ |
+| **Load Balancer** | Application LB | Cross-zone, health checks |
+| **Monitoring** | CloudWatch + SNS | Custom metrics, alarms |
+| **Security** | WAF + Secrets Manager | Rate limiting, encryption |
 
 
 ### Architecture Diagram
@@ -279,11 +279,11 @@ Internet → CloudFront → WAF → ALB → EC2 (Private) → Aurora/Redis (Data
 
 ### Phase 1: Documentation & Architecture
 - [x] **SLO/SLI Definitions**: 99.95% availability, <200ms latency
-- [x] **Fault Tolerance Strategy**: Circuit breaker, graceful degradation  
+- [x] **Fault Tolerance Strategy**: Circuit breaker, graceful degradation
 - [x] **Cost Analysis**: $292-662/month with optimization strategies
 - [x] **Capacity Planning**: Auto-scaling for 10x traffic spikes
 
-### Phase 2: Infrastructure as Code  
+### Phase 2: Infrastructure as Code
 - [x] **Terraform Modules**: VPC, Security, Compute, Database, Cache, Monitoring
 - [x] **AWS Resources**: 29 components, multi-AZ deployment
 - [x] **Security**: WAF, encryption, least privilege IAM

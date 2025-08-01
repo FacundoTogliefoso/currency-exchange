@@ -10,5 +10,6 @@
   { "ParameterKey": "DatabaseSubnet1Cidr", "ParameterValue": "10.0.21.0/24" },
   { "ParameterKey": "NotificationEmail", "ParameterValue": "alerts@example.com" },
   { "ParameterKey": "ContainerImage", "ParameterValue": "public.ecr.aws/nginx/nginx:latest" },
-  { "ParameterKey": "BanxicoToken", "ParameterValue": "60779e9a83e7133cc298c8d7f2b3e8750e9851887f7ad2f07e6c872445feb672" }
+  { "ParameterKey": "BanxicoToken", "ParameterValue": "60779e9a83e7133cc298c8d7f2b3e8750e9851887f7ad2f07e6c872445feb672" },
+  { "ParameterKey": "S3TemplateBucket", "ParameterValue": "currency-exchange-dev-templates-facu" }
 ]
