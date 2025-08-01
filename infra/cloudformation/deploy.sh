@@ -7,7 +7,7 @@ ENV="dev"
 AWS_REGION="us-west-1"
 ECR_REPO_NAME="currency-api"
 IMAGE_TAG="$(date +%Y%m%d-%H%M%S)"
-TEMPLATE_FILE="infra/cloudformation/main.yaml"
+TEMPLATE_FILE="infra/cloudformation/templates/main.yaml"
 STACK_NAME="${PROJECT_NAME}-${ENV}-stack"
 
 echo "Starting deployment..."
