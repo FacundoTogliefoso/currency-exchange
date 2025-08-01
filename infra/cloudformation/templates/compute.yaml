@@ -20,6 +20,7 @@ Parameters:
   ContainerImage:
     Type: String
     Description: Docker image URI from ECR
+    Default: "992313771618.dkr.ecr.us-west-1.amazonaws.com/currency-api:latest"
   ContainerPort:
     Type: Number
     Default: 8000

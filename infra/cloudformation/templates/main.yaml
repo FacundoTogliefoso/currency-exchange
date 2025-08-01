@@ -30,6 +30,7 @@ Parameters:
 
   ContainerImage:
     Type: String
+    Default: "992313771618.dkr.ecr.us-west-1.amazonaws.com/currency-api:latest"
 
   NotificationEmail:
     Type: String
